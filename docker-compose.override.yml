@@ -1,0 +1,57 @@
+# =============================================================================
+# ResumeForge – docker-compose.override.yml  (Development Overrides)
+# =============================================================================
+# This file is automatically merged with docker-compose.yml by Docker Compose
+# when running in development. It should NOT be committed if it contains
+# secrets. See .gitignore — this file IS tracked because it contains no
+# secrets; all secrets live in .env which is git-ignored.
+#
+# Use this file to:
+#   - Enable debug modes
+#   - Mount additional volumes
+#   - Override resource limits for local development
+#   - Add development-only services (e.g. Adminer, Redis Commander)
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL – expose extra diagnostics in dev
+  # ---------------------------------------------------------------------------
+  postgres:
+    environment:
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+
+  # ---------------------------------------------------------------------------
+  # Backend – relaxed healthcheck timing during active development
+  # ---------------------------------------------------------------------------
+  backend:
+    environment:
+      DEBUG: "true"
+      LOG_LEVEL: debug
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker – verbose logging in dev
+  # ---------------------------------------------------------------------------
+  celery_worker:
+    environment:
+      DEBUG: "true"
+    command: celery -A app.workers.celery_app:celery_app worker --loglevel=debug --concurrency=1
+
+  # ---------------------------------------------------------------------------
+  # Adminer – lightweight database browser (dev only)
+  # ---------------------------------------------------------------------------
+  adminer:
+    image: adminer:4.8.1
+    container_name: resumeforge-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: dracula
+    restart: unless-stopped
+    networks:
+      - resumeforge-network

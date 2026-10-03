@@ -1,0 +1,207 @@
+# =============================================================================
+# ResumeForge – .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Environment / Secrets  ← NEVER commit these
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+*.secret
+
+# .env.example IS intentionally tracked — it documents required variables
+# !.env.example  (already tracked by default, just don't add a rule to ignore it)
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.Python
+
+# Distribution / packaging
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+wheels/
+
+# uv
+.uv/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# Pyright
+pyrightconfig.json
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# -----------------------------------------------------------------------------
+# Node.js / Frontend
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Next.js
+.next/
+out/
+
+# Turbo
+.turbo/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Parcel cache
+.cache/
+.parcel-cache/
+
+# Build outputs
+dist/
+build/
+
+# -----------------------------------------------------------------------------
+# IDEs & Editors
+# -----------------------------------------------------------------------------
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# -----------------------------------------------------------------------------
+# Operating System
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# -----------------------------------------------------------------------------
+# Docker
+# -----------------------------------------------------------------------------
+# Override files that may contain local secrets should be git-ignored.
+# The committed docker-compose.override.yml only has dev defaults (no secrets).
+# If you create a personal override with secrets, name it:
+#   docker-compose.local.yml  → gitignored below
+docker-compose.local.yml
+
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+*.log
+logs/
+log/
+
+# -----------------------------------------------------------------------------
+# Databases (local SQLite / flat-file DBs)
+# -----------------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+
+# -----------------------------------------------------------------------------
+# Cryptographic Keys & Certificates
+# -----------------------------------------------------------------------------
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# -----------------------------------------------------------------------------
+# Alembic
+# -----------------------------------------------------------------------------
+# Auto-generated migration scripts are tracked — do NOT ignore alembic/versions/
+# alembic/versions/*.py  ← intentionally NOT ignored
+
+# -----------------------------------------------------------------------------
+# Miscellaneous
+# -----------------------------------------------------------------------------
+.scratch/
+tmp/
+temp/
+.tmp/
+*.bak
+*.orig
+*.rej
+
+# -----------------------------------------------------------------------------
+# Local file storage (user-uploaded resumes — never commit user data)
+# -----------------------------------------------------------------------------
+storage/resumes/
+storage/uploads/
+
+# -----------------------------------------------------------------------------
+# Frontend local env (may contain real API tokens)
+# -----------------------------------------------------------------------------
+apps/frontend/.env.local
+
+# -----------------------------------------------------------------------------
+# Test fixture binaries (large binary test files)
+# -----------------------------------------------------------------------------
+tests/fixtures/**/*.pdf
+tests/fixtures/**/*.docx
+tests/fixtures/**/*.doc

@@ -1,0 +1,12 @@
+{
+  "name": "@resumeforge/shared",
+  "version": "0.1.0",
+  "description": "Shared types and utilities for ResumeForge",
+  "main": "src/index.ts",
+  "private": true,
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": ["resumeforge", "shared", "types"],
+  "license": "MIT"
+}

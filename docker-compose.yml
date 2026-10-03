@@ -1,0 +1,164 @@
+version: "3.9"
+
+# =============================================================================
+# ResumeForge – Docker Compose
+# =============================================================================
+# Services:
+#   postgres        – pgvector-enabled PostgreSQL 16
+#   redis           – Redis 7.4 (persistence + pub/sub)
+#   mailhog         – Local SMTP / web UI for email testing
+#   backend         – FastAPI application
+#   celery_worker   – Celery async task worker
+#   frontend        – Next.js application
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL with pgvector extension
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: resumeforge-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-resumeforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-resumeforge_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-resumeforge}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-resumeforge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - resumeforge-network
+
+  # ---------------------------------------------------------------------------
+  # Redis – broker for Celery + caching layer
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7.4-alpine
+    container_name: resumeforge-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - resumeforge-network
+
+  # ---------------------------------------------------------------------------
+  # MailHog – local SMTP server + web UI for email testing
+  # ---------------------------------------------------------------------------
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: resumeforge-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    restart: unless-stopped
+    networks:
+      - resumeforge-network
+
+  # ---------------------------------------------------------------------------
+  # Backend – FastAPI application
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: resumeforge-backend
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - resumeforge-network
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker – async task processing
+  # ---------------------------------------------------------------------------
+  celery_worker:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: resumeforge-celery-worker
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/backend:/app
+    command: celery -A app.workers.celery_app:celery_app worker --loglevel=info --concurrency=2
+    restart: unless-stopped
+    networks:
+      - resumeforge-network
+
+  # ---------------------------------------------------------------------------
+  # Frontend – Next.js application
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: resumeforge-frontend
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+    restart: unless-stopped
+    networks:
+      - resumeforge-network
+
+# =============================================================================
+# Named volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  resumeforge-network:
+    driver: bridge
