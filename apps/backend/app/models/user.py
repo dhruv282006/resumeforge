@@ -42,6 +42,15 @@ class User(Base):
         default="user",
         nullable=False,
     )
+    hashed_password: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+    onboarding_completed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,

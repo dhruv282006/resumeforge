@@ -40,9 +40,11 @@ var/
 sdist/
 develop-eggs/
 .installed.cfg
-lib/
-lib64/
+/lib/
+/lib64/
 wheels/
+!apps/frontend/src/lib/
+!apps/frontend/src/lib/**
 
 # uv
 .uv/
@@ -178,30 +180,14 @@ id_ed25519.pub
 # alembic/versions/*.py  ← intentionally NOT ignored
 
 # -----------------------------------------------------------------------------
-# Miscellaneous
+# Miscellaneous & Storage
 # -----------------------------------------------------------------------------
 .scratch/
 tmp/
 temp/
 .tmp/
+storage/
+storage/**
 *.bak
 *.orig
 *.rej
-
-# -----------------------------------------------------------------------------
-# Local file storage (user-uploaded resumes — never commit user data)
-# -----------------------------------------------------------------------------
-storage/resumes/
-storage/uploads/
-
-# -----------------------------------------------------------------------------
-# Frontend local env (may contain real API tokens)
-# -----------------------------------------------------------------------------
-apps/frontend/.env.local
-
-# -----------------------------------------------------------------------------
-# Test fixture binaries (large binary test files)
-# -----------------------------------------------------------------------------
-tests/fixtures/**/*.pdf
-tests/fixtures/**/*.docx
-tests/fixtures/**/*.doc

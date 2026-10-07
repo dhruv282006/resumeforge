@@ -19,6 +19,7 @@ os.environ.setdefault("CELERY_BROKER_URL", "redis://localhost:6379/2")
 os.environ.setdefault("CELERY_RESULT_BACKEND", "redis://localhost:6379/3")
 os.environ.setdefault("ENVIRONMENT", "development")
 os.environ.setdefault("DEBUG", "true")
+os.environ["LLM_PROVIDER"] = "ollama"
 
 import app.models  # noqa: F401 - Register all models on Base.metadata
 from app.core.database import Base, get_db

@@ -8,7 +8,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import health, jobs, profile, resumes, tasks
+from app.api.v1.endpoints import (
+    applications,
+    auth,
+    health,
+    jobs,
+    profile,
+    resumes,
+    tailoring,
+    tasks,
+)
 
 api_v1_router = APIRouter()
 
@@ -16,6 +25,13 @@ api_v1_router = APIRouter()
 api_v1_router.include_router(
     health.router,
     tags=["Health"],
+)
+
+# Authentication & User Management
+api_v1_router.include_router(
+    auth.router,
+    prefix="/auth",
+    tags=["Auth"],
 )
 
 # Master Career Profile and sub-entities
@@ -32,11 +48,25 @@ api_v1_router.include_router(
     tags=["Resumes"],
 )
 
+# Resume Tailoring, Truth Guard & Diffing
+api_v1_router.include_router(
+    tailoring.router,
+    prefix="/resumes",
+    tags=["Tailoring"],
+)
+
 # Job Descriptions and Semantic Matching
 api_v1_router.include_router(
     jobs.router,
     prefix="/jobs",
     tags=["Jobs"],
+)
+
+# Applications Tracking
+api_v1_router.include_router(
+    applications.router,
+    prefix="/applications",
+    tags=["Applications"],
 )
 
 # Background Tasks

@@ -3,33 +3,60 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any, List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class EmptyStringToNoneModel(BaseModel):
+    """Base model that automatically coerces empty or whitespace-only strings to None.
+
+    This prevents 422 Unprocessable Content validation errors when HTML forms
+    send empty string inputs for optional date, numeric, or string fields.
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def empty_strings_to_none(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            return {
+                k: None if (isinstance(v, str) and v.strip() == "") else v
+                for k, v in data.items()
+            }
+        return data
 
 
 # ---------------- Education Schemas ----------------
-class EducationBase(BaseModel):
+class EducationBase(EmptyStringToNoneModel):
     institution: str
-    degree: Optional[str] = None
+    degree: str = "Degree"
     field_of_study: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     gpa: Optional[float] = None
     percentage: Optional[float] = None
     description: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_degree(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            deg = data.get("degree")
+            if deg is None or (isinstance(deg, str) and not deg.strip()):
+                data["degree"] = "Degree"
+        return data
 
 
 class EducationCreate(EducationBase):
     pass
 
 
-class EducationUpdate(BaseModel):
+class EducationUpdate(EmptyStringToNoneModel):
     institution: Optional[str] = None
     degree: Optional[str] = None
     field_of_study: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     gpa: Optional[float] = None
     percentage: Optional[float] = None
     description: Optional[str] = None
@@ -45,13 +72,13 @@ class EducationResponse(EducationBase):
 
 
 # ---------------- Experience Schemas ----------------
-class ExperienceBase(BaseModel):
+class ExperienceBase(EmptyStringToNoneModel):
     company: str
     title: str
     employment_type: Optional[str] = None
     location: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     is_current: bool = False
     description: Optional[str] = None
     achievements: Optional[List[str]] = Field(default_factory=list)
@@ -62,13 +89,13 @@ class ExperienceCreate(ExperienceBase):
     confidence: float = 1.0
 
 
-class ExperienceUpdate(BaseModel):
+class ExperienceUpdate(EmptyStringToNoneModel):
     company: Optional[str] = None
     title: Optional[str] = None
     employment_type: Optional[str] = None
     location: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     is_current: Optional[bool] = None
     description: Optional[str] = None
     achievements: Optional[List[str]] = None
@@ -86,7 +113,7 @@ class ExperienceResponse(ExperienceBase):
 
 
 # ---------------- Skill Schemas ----------------
-class SkillBase(BaseModel):
+class SkillBase(EmptyStringToNoneModel):
     name: str
     normalized_name: Optional[str] = None
     category: Optional[str] = "TECHNICAL"
@@ -99,7 +126,7 @@ class SkillCreate(SkillBase):
     confidence: float = 1.0
 
 
-class SkillUpdate(BaseModel):
+class SkillUpdate(EmptyStringToNoneModel):
     name: Optional[str] = None
     normalized_name: Optional[str] = None
     category: Optional[str] = None
@@ -121,13 +148,13 @@ class SkillResponse(SkillBase):
 
 
 # ---------------- Project Schemas ----------------
-class ProjectBase(BaseModel):
+class ProjectBase(EmptyStringToNoneModel):
     name: str
     description: Optional[str] = None
     technologies: Optional[List[str]] = Field(default_factory=list)
     role: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     project_url: Optional[str] = None
     github_url: Optional[str] = None
     achievements: Optional[List[str]] = Field(default_factory=list)
@@ -138,13 +165,13 @@ class ProjectCreate(ProjectBase):
     pass
 
 
-class ProjectUpdate(BaseModel):
+class ProjectUpdate(EmptyStringToNoneModel):
     name: Optional[str] = None
     description: Optional[str] = None
     technologies: Optional[List[str]] = None
     role: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     project_url: Optional[str] = None
     github_url: Optional[str] = None
     achievements: Optional[List[str]] = None
@@ -161,11 +188,11 @@ class ProjectResponse(ProjectBase):
 
 
 # ---------------- Certification Schemas ----------------
-class CertificationBase(BaseModel):
+class CertificationBase(EmptyStringToNoneModel):
     name: str
     issuing_organization: Optional[str] = None
-    issue_date: Optional[date] = None
-    expiry_date: Optional[date] = None
+    issue_date: Optional[str] = None
+    expiry_date: Optional[str] = None
     credential_id: Optional[str] = None
     credential_url: Optional[str] = None
 
@@ -174,11 +201,11 @@ class CertificationCreate(CertificationBase):
     pass
 
 
-class CertificationUpdate(BaseModel):
+class CertificationUpdate(EmptyStringToNoneModel):
     name: Optional[str] = None
     issuing_organization: Optional[str] = None
-    issue_date: Optional[date] = None
-    expiry_date: Optional[date] = None
+    issue_date: Optional[str] = None
+    expiry_date: Optional[str] = None
     credential_id: Optional[str] = None
     credential_url: Optional[str] = None
 
@@ -193,7 +220,7 @@ class CertificationResponse(CertificationBase):
 
 
 # ---------------- Profile Master Schemas ----------------
-class ProfileBase(BaseModel):
+class ProfileBase(EmptyStringToNoneModel):
     full_name: str
     headline: Optional[str] = None
     summary: Optional[str] = None
@@ -210,7 +237,7 @@ class ProfileBase(BaseModel):
     current_status: Optional[str] = None
 
 
-class ProfileUpdate(BaseModel):
+class ProfileUpdate(EmptyStringToNoneModel):
     full_name: Optional[str] = None
     headline: Optional[str] = None
     summary: Optional[str] = None
@@ -244,4 +271,3 @@ class ProfileResponse(ProfileBase):
 class ProfileCompletenessResponse(BaseModel):
     overall: int
     sections: dict[str, int]
-

@@ -52,7 +52,7 @@ class ValidationError(ResumeForgeError):
     Distinct from Pydantic's ``ValidationError`` which is caught separately.
     """
 
-    http_status = status.HTTP_422_UNPROCESSABLE_ENTITY
+    http_status = getattr(status, "HTTP_422_UNPROCESSABLE_CONTENT", status.HTTP_422_UNPROCESSABLE_ENTITY)
     error_code = "VALIDATION_ERROR"
 
 

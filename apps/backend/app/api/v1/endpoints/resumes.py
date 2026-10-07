@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, Upl
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user_id
 from app.schemas.resume import (
     ResumeCreate,
     ResumeResponse,
@@ -16,7 +17,7 @@ from app.schemas.resume import (
     ResumeVersionCreate,
     ResumeVersionResponse,
 )
-from app.services.resume_service import DEFAULT_USER_ID, ResumeService
+from app.services.resume_service import ResumeService
 
 router = APIRouter()
 
@@ -28,28 +29,31 @@ def get_resume_service(db: AsyncSession = Depends(get_db)) -> ResumeService:
 # ---------------- Resume Document Endpoints ----------------
 @router.get("", response_model=List[ResumeResponse])
 async def list_resumes(
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> List[ResumeResponse]:
     """List all resume families owned by candidate."""
-    return await service.list_resumes(DEFAULT_USER_ID)  # type: ignore[return-value]
+    return await service.list_resumes(user_id)  # type: ignore[return-value]
 
 
 @router.post("", response_model=ResumeResponse, status_code=status.HTTP_201_CREATED)
 async def create_resume(
     payload: ResumeCreate,
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeResponse:
     """Create a new Resume family with initial version."""
-    return await service.create_resume(payload, DEFAULT_USER_ID)  # type: ignore[return-value]
+    return await service.create_resume(payload, user_id)  # type: ignore[return-value]
 
 
 @router.get("/{id}", response_model=ResumeResponse)
 async def get_resume(
     id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeResponse:
     """Get single resume with its complete version tree."""
-    resume = await service.get_resume(id, DEFAULT_USER_ID)
+    resume = await service.get_resume(id, user_id)
     if not resume:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
     return resume  # type: ignore[return-value]
@@ -59,10 +63,11 @@ async def get_resume(
 async def update_resume(
     id: uuid.UUID,
     payload: ResumeUpdate,
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeResponse:
     """Update resume metadata or active version."""
-    resume = await service.update_resume(id, payload, DEFAULT_USER_ID)
+    resume = await service.update_resume(id, payload, user_id)
     if not resume:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
     return resume  # type: ignore[return-value]
@@ -71,10 +76,11 @@ async def update_resume(
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_resume(
     id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> None:
     """Delete resume and all its version snapshots and associated files."""
-    deleted = await service.delete_resume(id, DEFAULT_USER_ID)
+    deleted = await service.delete_resume(id, user_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
 
@@ -83,10 +89,11 @@ async def delete_resume(
 @router.get("/{id}/versions", response_model=List[ResumeVersionResponse])
 async def list_resume_versions(
     id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> List[ResumeVersionResponse]:
     """List all versions of a specific resume."""
-    versions = await service.list_versions(id, DEFAULT_USER_ID)
+    versions = await service.list_versions(id, user_id)
     return versions  # type: ignore[return-value]
 
 
@@ -94,10 +101,11 @@ async def list_resume_versions(
 async def create_resume_version(
     id: uuid.UUID,
     payload: ResumeVersionCreate,
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeVersionResponse:
     """Create a new manual/structured resume version."""
-    version = await service.create_version(id, payload, DEFAULT_USER_ID)
+    version = await service.create_version(id, payload, user_id)
     if not version:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
     return version  # type: ignore[return-value]
@@ -107,10 +115,11 @@ async def create_resume_version(
 async def get_resume_version(
     id: uuid.UUID,
     version_id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeVersionResponse:
     """Get detail and extracted text of a specific resume version."""
-    version = await service.get_version(id, version_id, DEFAULT_USER_ID)
+    version = await service.get_version(id, version_id, user_id)
     if not version:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume version not found")
     return version  # type: ignore[return-value]
@@ -121,10 +130,11 @@ async def clone_resume_version(
     id: uuid.UUID,
     version_id: uuid.UUID,
     payload: ResumeVersionClone,
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeVersionResponse:
     """Clone an immutable version into a new version branch."""
-    cloned = await service.clone_version(id, version_id, payload, DEFAULT_USER_ID)
+    cloned = await service.clone_version(id, version_id, payload, user_id)
     if not cloned:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume or version not found")
     return cloned  # type: ignore[return-value]
@@ -134,10 +144,11 @@ async def clone_resume_version(
 async def activate_resume_version(
     id: uuid.UUID,
     version_id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeResponse:
     """Designate a version as the active version of the resume."""
-    resume = await service.activate_version(id, version_id, DEFAULT_USER_ID)
+    resume = await service.activate_version(id, version_id, user_id)
     if not resume:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume or version not found")
     return resume  # type: ignore[return-value]
@@ -149,6 +160,7 @@ async def upload_resume_version(
     file: UploadFile = File(...),
     version_number: Optional[str] = Form(None),
     change_summary: Optional[str] = Form(None),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     service: ResumeService = Depends(get_resume_service),
 ) -> ResumeVersionResponse:
     """Upload a PDF or DOCX file, extract text, and append a new immutable version."""
@@ -171,7 +183,7 @@ async def upload_resume_version(
             resume_id=id,
             file_bytes=file_bytes,
             filename=filename,
-            user_id=DEFAULT_USER_ID,
+            user_id=user_id,
             version_number=version_number,
             change_summary=change_summary,
         )

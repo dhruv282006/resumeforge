@@ -37,6 +37,6 @@ def health_check(self: Task) -> dict[str, str]:
     return {
         "status": "ok",
         "worker": self.request.hostname or "unknown",
-        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "message": "ResumeForge Celery worker is operational",
     }

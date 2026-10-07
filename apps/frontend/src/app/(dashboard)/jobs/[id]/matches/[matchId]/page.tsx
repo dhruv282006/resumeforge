@@ -10,11 +10,12 @@ import {
   XCircle,
   HelpCircle,
   TrendingUp,
-  Award,
-  Layers,
+  Sparkles,
   ShieldCheck,
   Building,
-  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,74 +38,73 @@ export default function MatchDetailPage() {
   const { job } = useJobDetail(jobId);
   const { data: match, isLoading } = useJobMatchDetail(jobId, matchId);
 
-  // Status Filter
-  const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
+  // Status Filter: "ALL" | "MATCHED" | "PARTIAL" | "MISSING"
+  const [activeTab, setActiveTab] = React.useState<string>("ALL");
+  const [showTechnicalBreakdown, setShowTechnicalBreakdown] = React.useState<boolean>(false);
+  const [expandedEvidenceIds, setExpandedEvidenceIds] = React.useState<Record<string, boolean>>({});
+
+  const toggleEvidence = (id: string) => {
+    setExpandedEvidenceIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   if (isLoading || !match) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-8 w-48 bg-muted rounded" />
-        <div className="h-64 bg-muted/40 rounded-lg" />
+        <div className="h-64 bg-muted/40 rounded-xl" />
       </div>
     );
   }
 
-  // Score tier
-  const score = match.overall_score;
-  const getScoreTier = (val: number) => {
-    if (val >= 80) return { label: "Strong Fit", color: "text-emerald-600", bg: "bg-emerald-500/10 border-emerald-500/20" };
-    if (val >= 65) return { label: "Competitive Fit", color: "text-blue-600", bg: "bg-blue-500/10 border-blue-500/20" };
-    if (val >= 50) return { label: "Moderate Fit", color: "text-amber-600", bg: "bg-amber-500/10 border-amber-500/20" };
-    return { label: "Low Fit", color: "text-red-600", bg: "bg-red-500/10 border-red-500/20" };
-  };
-  const tier = getScoreTier(score);
+  const score = Math.round(match.overall_score);
 
-  // Count items by status
-  const counts = {
-    ALL: match.items.length,
-    MATCHED: match.items.filter((it) => it.status === "MATCHED").length,
-    PARTIAL: match.items.filter((it) => it.status === "PARTIAL").length,
-    MISSING: match.items.filter((it) => it.status === "MISSING").length,
-    UNKNOWN: match.items.filter((it) => it.status === "UNKNOWN").length,
+  const getScoreInfo = (val: number) => {
+    if (val >= 80) {
+      return {
+        label: "Strong Match",
+        summary: "Your skills and experience align closely with what this employer needs.",
+        badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800",
+        ringClass: "text-emerald-600",
+      };
+    }
+    if (val >= 65) {
+      return {
+        label: "Competitive Match",
+        summary: "You meet the core requirements. A targeted resume version will boost your chances.",
+        badgeClass: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800",
+        ringClass: "text-blue-600",
+      };
+    }
+    if (val >= 50) {
+      return {
+        label: "Moderate Match",
+        summary: "You have several relevant skills, but a few key requirements are missing or unphrased.",
+        badgeClass: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800",
+        ringClass: "text-amber-600",
+      };
+    }
+    return {
+      label: "Needs Improvement",
+      summary: "Significant experience gaps detected. Consider adding matching projects or coursework.",
+      badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800",
+      ringClass: "text-rose-600",
+    };
   };
+
+  const scoreInfo = getScoreInfo(score);
+
+  // Bucket counts
+  const matchedCount = match.items.filter((it) => it.status === "MATCHED").length;
+  const partialCount = match.items.filter((it) => it.status === "PARTIAL").length;
+  const missingCount = match.items.filter((it) => it.status === "MISSING").length;
 
   const filteredItems = match.items.filter((it) => {
-    if (statusFilter === "ALL") return true;
-    return it.status === statusFilter;
+    if (activeTab === "ALL") return true;
+    return it.status === activeTab;
   });
-
-  const getStatusBadge = (status: MatchStatus) => {
-    switch (status) {
-      case "MATCHED":
-        return (
-          <Badge className="gap-1 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 border-emerald-500/30">
-            <CheckCircle2 className="h-3 w-3" />
-            Matched
-          </Badge>
-        );
-      case "PARTIAL":
-        return (
-          <Badge className="gap-1 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 border-amber-500/30">
-            <AlertTriangle className="h-3 w-3" />
-            Partial Match
-          </Badge>
-        );
-      case "MISSING":
-        return (
-          <Badge className="gap-1 bg-red-500/15 text-red-700 hover:bg-red-500/25 border-red-500/30">
-            <XCircle className="h-3 w-3" />
-            Missing
-          </Badge>
-        );
-      case "UNKNOWN":
-        return (
-          <Badge variant="outline" className="gap-1 text-muted-foreground">
-            <HelpCircle className="h-3 w-3" />
-            Unknown
-          </Badge>
-        );
-    }
-  };
 
   const getRequirementText = (reqId: string) => {
     if (!job?.requirements) return "Requirement description unavailable";
@@ -126,10 +126,10 @@ export default function MatchDetailPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Back button */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Button variant="ghost" size="sm" asChild className="gap-1 px-2">
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" asChild className="gap-1.5 px-2 text-slate-500 hover:text-slate-800">
           <Link href={`/jobs/${jobId}`}>
             <ArrowLeft className="h-4 w-4" />
             Back to Job Details
@@ -137,240 +137,326 @@ export default function MatchDetailPage() {
         </Button>
       </div>
 
-      {/* Header */}
-      <div className="flex flex-col gap-2 p-6 bg-card border rounded-lg shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Job Match Analysis Report
-            </h1>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground flex items-center gap-1">
-                <Building className="h-4 w-4 text-muted-foreground" />
-                {job?.title} • {job?.company || "Target Job"}
-              </span>
+      {/* Hero Match Score Card */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-3 flex-1">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <Building className="h-4 w-4 text-slate-400" />
+              <span>{job?.company || "Target Company"}</span>
               <span>•</span>
-              <Badge variant="outline" className="text-xs">
-                Target: {match.target_type === "PROFILE" ? "Master Career Profile" : "Resume Version"}
+              <span className="text-slate-700 dark:text-slate-300">{job?.title}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                {score}% Match
+              </h1>
+              <Badge className={`px-3 py-1 text-xs font-semibold rounded-full border ${scoreInfo.badgeClass}`}>
+                {scoreInfo.label}
               </Badge>
-              <span>•</span>
-              <span className="flex items-center gap-1 text-xs">
-                <Calendar className="h-3.5 w-3.5" />
-                {new Date(match.created_at).toLocaleString()}
-              </span>
+            </div>
+
+            <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
+              {scoreInfo.summary}
+            </p>
+
+            {/* Quick CTAs */}
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <Link href={`/resumes?tailorForJob=${jobId}`}>
+                <Button className="h-10 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl gap-2 shadow-sm">
+                  <Sparkles className="h-4 w-4" />
+                  Tailor My Resume for This Job
+                </Button>
+              </Link>
+              <Link href={`/applications`}>
+                <Button variant="outline" className="h-10 rounded-xl gap-1.5 border-slate-300 dark:border-slate-700">
+                  <Plus className="h-4 w-4" />
+                  Track in Applications
+                </Button>
+              </Link>
             </div>
           </div>
 
-          <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border ${tier.bg}`}>
-            <div className="text-right">
-              <div className="text-xs uppercase font-semibold text-muted-foreground">Compatibility</div>
-              <div className={`font-bold ${tier.color}`}>{tier.label}</div>
+          {/* 3 Outcome Summary Cards */}
+          <div className="grid grid-cols-3 gap-3 md:w-80 shrink-0">
+            <div
+              onClick={() => setActiveTab("MATCHED")}
+              className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                activeTab === "MATCHED"
+                  ? "border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20"
+                  : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 hover:border-emerald-300"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Matched</span>
+              </div>
+              <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {matchedCount}
+              </div>
+              <div className="text-[11px] text-slate-500">Skills present</div>
             </div>
-            <div className={`text-4xl font-extrabold ${tier.color}`}>
-              {match.overall_score}
+
+            <div
+              onClick={() => setActiveTab("PARTIAL")}
+              className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                activeTab === "PARTIAL"
+                  ? "border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 ring-2 ring-amber-500/20"
+                  : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 hover:border-amber-300"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>Partial</span>
+              </div>
+              <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {partialCount}
+              </div>
+              <div className="text-[11px] text-slate-500">Needs highlight</div>
+            </div>
+
+            <div
+              onClick={() => setActiveTab("MISSING")}
+              className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                activeTab === "MISSING"
+                  ? "border-rose-500 bg-rose-50/80 dark:bg-rose-950/40 ring-2 ring-rose-500/20"
+                  : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 hover:border-rose-300"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-700 dark:text-rose-400">
+                <XCircle className="h-3.5 w-3.5" />
+                <span>Missing</span>
+              </div>
+              <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {missingCount}
+              </div>
+              <div className="text-[11px] text-slate-500">Not found</div>
             </div>
           </div>
-        </div>
-
-        {/* Factual Grounding Banner */}
-        <div className="mt-4 flex items-center gap-2 rounded-md bg-muted/40 p-3 text-xs text-muted-foreground border">
-          <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-          <span>
-            <strong>Transparent & Grounded:</strong> This score is computed from verified candidate profile data, direct skill normalization, and semantic cosine similarity. ResumeForge never invents experience or skills.
-          </span>
         </div>
       </div>
 
-      {/* 5-Component Score Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            Transparent Score Component Breakdown
-          </CardTitle>
-          <CardDescription>
-            Weighted contribution of each domain component to the final 0–100 Job Match Score.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {/* 1. Required Skills */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-medium text-foreground">Required Skills Match (Weight: 35%)</span>
-              <span className="font-bold">{breakdown.required_skills}%</span>
-            </div>
-            <Progress value={breakdown.required_skills} className="h-2" />
+      {/* Progressive Disclosure: Collapsible Technical Breakdown */}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 overflow-hidden">
+        <button
+          onClick={() => setShowTechnicalBreakdown(!showTechnicalBreakdown)}
+          className="w-full flex items-center justify-between p-4 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-blue-600" />
+            <span>How was this score calculated? (Detailed Breakdown)</span>
           </div>
+          {showTechnicalBreakdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
 
-          {/* 2. Preferred Skills */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-medium text-foreground">Preferred & Bonus Skills (Weight: 15%)</span>
-              <span className="font-bold">{breakdown.preferred_skills}%</span>
+        {showTechnicalBreakdown && (
+          <div className="p-4 pt-0 border-t border-slate-200/60 dark:border-slate-800/60 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="font-medium">Required Skills (35%)</span>
+                  <span className="font-bold text-blue-600">{breakdown.required_skills}%</span>
+                </div>
+                <Progress value={breakdown.required_skills} className="h-1.5" />
+              </div>
+
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="font-medium">Preferred Skills (15%)</span>
+                  <span className="font-bold text-blue-600">{breakdown.preferred_skills}%</span>
+                </div>
+                <Progress value={breakdown.preferred_skills} className="h-1.5" />
+              </div>
+
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="font-medium">Experience Relevance (20%)</span>
+                  <span className="font-bold text-blue-600">{breakdown.experience_relevance}%</span>
+                </div>
+                <Progress value={breakdown.experience_relevance} className="h-1.5" />
+              </div>
+
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="font-medium">Project Alignment (15%)</span>
+                  <span className="font-bold text-blue-600">{breakdown.project_relevance}%</span>
+                </div>
+                <Progress value={breakdown.project_relevance} className="h-1.5" />
+              </div>
+
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="font-medium">Semantic Fit (15%)</span>
+                  <span className="font-bold text-blue-600">{breakdown.semantic_alignment}%</span>
+                </div>
+                <Progress value={breakdown.semantic_alignment} className="h-1.5" />
+              </div>
             </div>
-            <Progress value={breakdown.preferred_skills} className="h-2" />
-          </div>
 
-          {/* 3. Experience Relevance */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-medium text-foreground">Experience & Career Relevance (Weight: 20%)</span>
-              <span className="font-bold">{breakdown.experience_relevance}%</span>
+            <div className="flex items-center gap-2 text-xs text-slate-500 pt-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>
+                Truth Guard verified: All scores are mathematically calculated from your authentic profile evidence. No fabricated claims.
+              </span>
             </div>
-            <Progress value={breakdown.experience_relevance} className="h-2" />
           </div>
+        )}
+      </div>
 
-          {/* 4. Project Relevance */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-medium text-foreground">Project Evidence Alignment (Weight: 15%)</span>
-              <span className="font-bold">{breakdown.project_relevance}%</span>
-            </div>
-            <Progress value={breakdown.project_relevance} className="h-2" />
-          </div>
-
-          {/* 5. Semantic Alignment */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-medium text-foreground">Semantic Conceptual Alignment (Weight: 15%)</span>
-              <span className="font-bold">{breakdown.semantic_alignment}%</span>
-            </div>
-            <Progress value={breakdown.semantic_alignment} className="h-2" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Requirement Breakdown & Evidence Attribution */}
+      {/* Main Requirements List with Filter Tabs */}
       <div className="space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight">Requirement Analysis & Grounded Evidence</h2>
-            <p className="text-xs text-muted-foreground">
-              Every requirement is verified against candidate facts with direct evidence attribution (&quot;WHY?&quot;).
-            </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold">Job Requirements Breakdown</h2>
+            <Badge variant="outline" className="text-xs">
+              {filteredItems.length} items
+            </Badge>
           </div>
 
-          {/* Status Filter Pills */}
-          <div className="flex flex-wrap gap-1.5 bg-muted/40 p-1.5 rounded-lg border text-xs">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs font-medium">
             <button
-              onClick={() => setStatusFilter("ALL")}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === "ALL" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"
+              onClick={() => setActiveTab("ALL")}
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                activeTab === "ALL"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs font-semibold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
               }`}
             >
-              All ({counts.ALL})
+              All ({match.items.length})
             </button>
             <button
-              onClick={() => setStatusFilter("MATCHED")}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === "MATCHED" ? "bg-emerald-600 text-white" : "hover:bg-muted text-emerald-700"
+              onClick={() => setActiveTab("MATCHED")}
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                activeTab === "MATCHED"
+                  ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs font-semibold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-emerald-700"
               }`}
             >
-              Matched ({counts.MATCHED})
+              Matched ({matchedCount})
             </button>
             <button
-              onClick={() => setStatusFilter("PARTIAL")}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === "PARTIAL" ? "bg-amber-600 text-white" : "hover:bg-muted text-amber-700"
+              onClick={() => setActiveTab("PARTIAL")}
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                activeTab === "PARTIAL"
+                  ? "bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 shadow-xs font-semibold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-amber-700"
               }`}
             >
-              Partial ({counts.PARTIAL})
+              Partial ({partialCount})
             </button>
             <button
-              onClick={() => setStatusFilter("MISSING")}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === "MISSING" ? "bg-red-600 text-white" : "hover:bg-muted text-red-700"
+              onClick={() => setActiveTab("MISSING")}
+              className={`px-3 py-1 rounded-lg transition-colors ${
+                activeTab === "MISSING"
+                  ? "bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-400 shadow-xs font-semibold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-rose-700"
               }`}
             >
-              Missing ({counts.MISSING})
-            </button>
-            <button
-              onClick={() => setStatusFilter("UNKNOWN")}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === "UNKNOWN" ? "bg-slate-700 text-white" : "hover:bg-muted text-slate-700"
-              }`}
-            >
-              Unknown ({counts.UNKNOWN})
+              Missing ({missingCount})
             </button>
           </div>
         </div>
 
-        {/* Requirements List */}
+        {/* Requirements Cards */}
         {filteredItems.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground border rounded-lg bg-card">
-            No requirements match this status filter.
+          <div className="text-center py-12 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-sm text-slate-500">
+            No requirements match this filter.
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="space-y-3">
             {filteredItems.map((item) => {
               const reqDetails = getRequirementDetails(item.requirement_id);
+              const isExpanded = !!expandedEvidenceIds[item.id];
+
               return (
-                <Card key={item.id} className="overflow-hidden border">
-                  <div className="p-4 space-y-3">
-                    {/* Requirement Header */}
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold leading-relaxed">
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs transition-all hover:border-slate-300 dark:hover:border-slate-700"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        {item.status === "MATCHED" && (
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 text-xs font-bold">
+                            ✓
+                          </span>
+                        )}
+                        {item.status === "PARTIAL" && (
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 text-xs font-bold">
+                            !
+                          </span>
+                        )}
+                        {item.status === "MISSING" && (
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400 text-xs font-bold">
+                            ✕
+                          </span>
+                        )}
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                           {getRequirementText(item.requirement_id)}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          {reqDetails && (
-                            <>
-                              <Badge variant="outline" className="text-xs">
-                                {reqDetails.category}
-                              </Badge>
-                              <Badge
-                                variant="secondary"
-                                className={`text-xs ${
-                                  reqDetails.importance === "REQUIRED"
-                                    ? "bg-red-500/10 text-red-600 border-red-500/20"
-                                    : "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                                }`}
-                              >
-                                {reqDetails.importance}
-                              </Badge>
-                              {reqDetails.min_experience_years && (
-                                <span className="text-muted-foreground">
-                                  Min: {reqDetails.min_experience_years}+ years
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </div>
+                        </h3>
                       </div>
 
-                      <div className="shrink-0">{getStatusBadge(item.status)}</div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 pl-7">
+                        {reqDetails && (
+                          <>
+                            <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 font-medium">
+                              {reqDetails.category}
+                            </span>
+                            <span
+                              className={`rounded px-2 py-0.5 font-medium ${
+                                reqDetails.importance === "REQUIRED"
+                                  ? "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                                  : "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
+                              }`}
+                            >
+                              {reqDetails.importance}
+                            </span>
+                          </>
+                        )}
+                        <span className="text-slate-400">•</span>
+                        <span>{item.explanation || "Analyzed against your profile."}</span>
+                      </div>
                     </div>
 
-                    {/* Evidence Card ("WHY?") */}
-                    <div className="bg-muted/30 p-3 rounded-lg border text-xs space-y-2">
-                      <div className="flex items-center justify-between text-muted-foreground font-semibold">
-                        <span className="uppercase tracking-wider text-[11px]">Attribution & Rationale</span>
+                    {/* Toggle Evidence Accordion */}
+                    <button
+                      onClick={() => toggleEvidence(item.id)}
+                      className="self-start sm:self-center shrink-0 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 pl-7 sm:pl-0"
+                    >
+                      <span>{isExpanded ? "Hide evidence" : "View evidence"}</span>
+                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+
+                  {/* Collapsible Progressive Disclosure Evidence */}
+                  {isExpanded && (
+                    <div className="mt-3 ml-7 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs space-y-2">
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span className="font-semibold uppercase tracking-wider text-[10px]">
+                          Profile Attribution
+                        </span>
                         <span>Confidence: {Math.round(item.score * 100)}%</span>
                       </div>
 
-                      <p className="text-foreground leading-relaxed">
-                        {item.explanation || "Evaluation completed based on available candidate profile evidence."}
-                      </p>
-
-                      {item.matched_entity_name && (
-                        <div className="flex flex-wrap items-center gap-2 pt-1 border-t text-muted-foreground">
-                          <span>Matched Source: <strong>{item.matched_entity_name}</strong></span>
-                          <span>•</span>
-                          <span>Type: {item.matched_entity_type}</span>
-                          <span>•</span>
-                          <span>Origin: {item.evidence_source}</span>
-                        </div>
+                      {item.matched_entity_name ? (
+                        <p className="text-slate-700 dark:text-slate-300">
+                          Matched evidence from: <strong>{item.matched_entity_name}</strong> ({item.matched_entity_type})
+                        </p>
+                      ) : (
+                        <p className="text-slate-500 italic">
+                          No direct profile evidence found. Consider adding this skill to your Master Career Profile.
+                        </p>
                       )}
 
                       {item.evidence_summary && (
-                        <p className="text-muted-foreground italic bg-card p-2 rounded border">
+                        <blockquote className="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-2.5 text-slate-600 dark:text-slate-300 italic border-l-2 border-blue-500">
                           &ldquo;{item.evidence_summary}&rdquo;
-                        </p>
+                        </blockquote>
                       )}
                     </div>
-                  </div>
-                </Card>
+                  )}
+                </div>
               );
             })}
           </div>

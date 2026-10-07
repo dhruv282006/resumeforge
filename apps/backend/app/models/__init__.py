@@ -1,5 +1,6 @@
 """SQLAlchemy ORM models package export for ResumeForge backend."""
 
+from app.models.application import Application
 from app.models.certification import Certification
 from app.models.education import Education
 from app.models.embedding import EmbeddingRecord
@@ -31,5 +32,6 @@ __all__ = [
     "JobMatch",
     "JobMatchItem",
     "EmbeddingRecord",
+    "Application",
 ]
 

@@ -9,3 +9,4 @@ export type {
 } from "./api";
 
 export * from "./tailoring";
+export * from "./auth";
